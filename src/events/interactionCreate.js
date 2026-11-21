@@ -24,6 +24,12 @@ module.exports = {
   name: 'interactionCreate',
   async execute(interaction, client) {
     try {
+      if (interaction.isAutocomplete()) {
+        const cmd = client.commands.get(interaction.commandName);
+        if (cmd?.autocomplete) await cmd.autocomplete(interaction);
+        return;
+      }
+
       if (interaction.isChatInputCommand()) {
         const cmd = client.commands.get(interaction.commandName);
         if (cmd) await cmd.execute(interaction);
