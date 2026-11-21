@@ -1,6 +1,5 @@
 const {
-  ActionRowBuilder, AttachmentBuilder, ButtonBuilder, ButtonStyle, ChannelType,
-  EmbedBuilder, PermissionFlagsBits,
+  AttachmentBuilder, ChannelType, EmbedBuilder, PermissionFlagsBits,
 } = require('discord.js');
 const config = require('../config');
 const catalog = require('../catalog');
@@ -22,15 +21,7 @@ function ticketEmbed(offer, method, userId, status = 'pending') {
       { name: 'Statut', value: STATUS[status].text, inline: true },
       { name: `Paiement ${pay.emoji} ${pay.label}`, value: pay.details },
     )
-    .setFooter({ text: 'Après paiement, envoie une preuve dans ce salon.' });
-}
-
-function staffButtons(disabled = {}) {
-  return new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId('ticket:paid').setLabel('Paiement reçu').setStyle(ButtonStyle.Success).setDisabled(!!disabled.paid),
-    new ButtonBuilder().setCustomId('ticket:done').setLabel('Terminé').setStyle(ButtonStyle.Primary).setDisabled(!!disabled.done),
-    new ButtonBuilder().setCustomId('ticket:close').setLabel('Fermer').setStyle(ButtonStyle.Danger),
-  );
+    .setFooter({ text: 'Après paiement, envoie une preuve dans ce salon. Le staff valide avec /paye.' });
 }
 
 async function createTicket(interaction, offerId, method) {
@@ -54,7 +45,7 @@ async function createTicket(interaction, offerId, method) {
     name: `commande-${user.username}`.slice(0, 90),
     type: ChannelType.GuildText,
     parent: config.ticketCategoryId || undefined,
-    topic: `ticket:${user.id}:${offer.id}`,
+    topic: `ticket:${user.id}:${offer.id}:${method}`,
     permissionOverwrites: overwrites,
   });
 
@@ -62,7 +53,6 @@ async function createTicket(interaction, offerId, method) {
   await channel.send({
     content: `${staffPing}<@${user.id}>`,
     embeds: [ticketEmbed(offer, method, user.id)],
-    components: [staffButtons({ done: true })],
   });
   return { channel };
 }
@@ -89,4 +79,28 @@ async function sendTranscript(channel) {
   });
 }
 
-module.exports = { createTicket, ticketEmbed, staffButtons, sendTranscript };
+function parseTopic(channel) {
+  if (!channel.topic?.startsWith('ticket:')) return null;
+  const [, userId, offerId, method] = channel.topic.split(':');
+  const offer = catalog.find((o) => o.id === offerId);
+  return offer && config.payments[method] ? { userId, offer, method } : null;
+}
+
+// Met à jour le message d'origine du ticket (le premier du salon)
+async function setStatus(channel, status) {
+  const info = parseTopic(channel);
+  if (!info) return false;
+  const [first] = [...(await channel.messages.fetch({ after: '0', limit: 1 })).values()];
+  if (first?.author.id === channel.client.user.id) {
+    await first.edit({ embeds: [ticketEmbed(info.offer, info.method, info.userId, status)] });
+  }
+  return info;
+}
+
+async function closeTicket(interaction) {
+  await interaction.reply('Fermeture du ticket dans 5 secondes…');
+  await sendTranscript(interaction.channel).catch(console.error);
+  setTimeout(() => interaction.channel.delete().catch(console.error), 5000);
+}
+
+module.exports = { createTicket, ticketEmbed, parseTopic, setStatus, closeTicket };

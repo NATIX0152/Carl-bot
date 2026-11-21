@@ -13,8 +13,11 @@ npm start
 `DISCORD_TOKEN`, `GUILD_ID`, `STAFF_ROLE_ID`, `TICKET_CATEGORY_ID`, `LOG_CHANNEL_ID`, `PAYPAL_EMAIL`, `LITECOIN_ADDRESS`.
 Les tarifs se modifient directement sur Discord avec `/setprix` (sauvegardés dans `data/prices.json`). Les prix par défaut sont dans `src/catalog.js`.
 
-## Commandes
-- `/panel` — poste le panneau de commande (staff)
-- `/setprix` — change le prix d'un boost (staff)
+## Commandes (toutes en slash)
+- `/commander` — le client choisit son boost et son paiement (PayPal / Litecoin) ; un ticket privé est créé
 - `/prix` — affiche les tarifs
-- `/close` — ferme un ticket (staff)
+- `/panel` — poste le panneau des tarifs (staff)
+- `/setprix` — change le prix d'un boost (staff)
+- `/paye` — marque le paiement reçu, dans un ticket (staff)
+- `/termine` — marque la commande terminée, dans un ticket (staff)
+- `/close` — ferme le ticket avec transcription (staff)
